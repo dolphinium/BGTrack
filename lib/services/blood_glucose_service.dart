@@ -5,6 +5,8 @@ import 'dart:math';
 class BloodGlucoseService {
   final String lastBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=1';
   final String monthlyBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=8640';
+  final String lastDayBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=288';
+
   Future<int> getCurrentBloodGlucose() async {
     try {
       final response = await http.get(Uri.parse(lastBG), headers: {'accept': 'application/json'});
@@ -59,10 +61,49 @@ class BloodGlucoseService {
       throw Exception('Error: $e');
     }
   }
+  Future<int> getHighestValueLast24Hours() async {
+    try {
+      final response = await http.get(Uri.parse(lastDayBG), headers: {'accept': 'application/json'});
 
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final highestValue = data.map((entry) => entry['sgv'] as int).reduce((a, b) => a > b ? a : b);
+          return highestValue;
+        } else {
+          throw Exception('No data available');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  Future<int> getLowestValueLast24Hours() async {
+    try {
+      final response = await http.get(Uri.parse(lastDayBG), headers: {'accept': 'application/json'});
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          final lowestValue = data.map((entry) => entry['sgv'] as int).reduce((a, b) => a < b ? a : b);
+          return lowestValue;
+        } else {
+          throw Exception('No data available');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+}
   double _calculateStandardDeviation(List<int> values) {
     final double mean = values.reduce((a, b) => a + b) / values.length;
     final double variance = values.map((value) => (value - mean) * (value - mean)).reduce((a, b) => a + b) / values.length;
     return variance > 0 ? sqrt(variance) : 0;
   }
-}
+
