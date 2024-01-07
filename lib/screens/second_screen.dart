@@ -11,7 +11,7 @@ class SecondScreen extends StatelessWidget {
         title: Text('Summary Page'),
       ),
       body: FutureBuilder(
-        future: _bloodGlucoseService.getStatisticsForLast90Days(),
+        future: _bloodGlucoseService.getStatisticsForLast30Days(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return CircularProgressIndicator();
