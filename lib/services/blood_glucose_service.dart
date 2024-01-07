@@ -6,6 +6,7 @@ class BloodGlucoseService {
   final String lastBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=1';
   final String monthlyBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=8640';
   final String lastDayBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=288';
+  final String last10BG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=10';
 
   Future<int> getCurrentBloodGlucose() async {
     try {
@@ -27,6 +28,43 @@ class BloodGlucoseService {
       throw Exception('Error: $e');
     }
   }
+
+  Future<List<Map<String, dynamic>>> getLast10BloodGlucoseWithTimestamp() async {
+    try {
+      final response = await http.get(Uri.parse(last10BG), headers: {'accept': 'application/json'});
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        if (data.isNotEmpty) {
+          List<Map<String, dynamic>> bloodGlucoseList = [];
+
+          for (var entry in data) {
+            final int currentBloodGlucose = entry['sgv'];
+            final String timestampUtc = entry['dateString'];
+
+            // Convert UTC timestamp to local time
+            final DateTime utcDateTime = DateTime.parse(timestampUtc);
+            final DateTime localDateTime = utcDateTime.toLocal();
+            final String localTimestamp = localDateTime.toIso8601String();
+
+            bloodGlucoseList.add({'sgv': currentBloodGlucose, 'timestamp': localTimestamp});
+          }
+
+          return bloodGlucoseList;
+        } else {
+          throw Exception('No data available');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+
+
 
   Future<Map<String, dynamic>> getStatisticsForLast30Days() async {
     try {

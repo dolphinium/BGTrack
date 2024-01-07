@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Import the intl package for formatting timestamps
 import 'second_screen.dart';
 import '/services/blood_glucose_service.dart';
 
@@ -11,11 +12,12 @@ class FirstScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('Blood Glucose App'),
       ),
-      body: FutureBuilder(
+      body: FutureBuilder<List>(
         future: Future.wait([
           _bloodGlucoseService.getCurrentBloodGlucose(),
           _bloodGlucoseService.getHighestValueLast24Hours(),
           _bloodGlucoseService.getLowestValueLast24Hours(),
+          _bloodGlucoseService.getLast10BloodGlucoseWithTimestamp(),
         ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -23,9 +25,11 @@ class FirstScreen extends StatelessWidget {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
-            int bloodGlucose = snapshot.data?[0] ?? 0; // Current blood glucose
-            int highestValue = snapshot.data?[1] ?? 0;
-            int lowestValue = snapshot.data?[2] ?? 0;
+            int bloodGlucose = (snapshot.data?[0] as int?) ?? 0;
+            int highestValue = (snapshot.data?[1] as int?) ?? 0;
+            int lowestValue = (snapshot.data?[2] as int?) ?? 0;
+            List<Map<String, dynamic>> last10BloodGlucose =
+                (snapshot.data?[3] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
             Color containerColor;
 
@@ -63,6 +67,21 @@ class FirstScreen extends StatelessWidget {
                 SizedBox(height: 20),
                 Text('Highest Value: $highestValue'),
                 Text('Lowest Value: $lowestValue'),
+                SizedBox(height: 20),
+                Text('Last 10 Values:'),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: last10BloodGlucose.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text('${last10BloodGlucose[index]['sgv']}'),
+                        subtitle: Text(
+                          'Time: ${DateFormat.Hm().format(DateTime.parse(last10BloodGlucose[index]['timestamp']))}',
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
