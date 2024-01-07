@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
+import 'dart:math';
 
 class BloodGlucoseService {
-  final String apiUrl = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=1';
-
+  final String lastBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=1';
+  final String monthlyBG = 'https://nightscout-web-trial.azurewebsites.net/api/v1/entries/sgv?count=8640';
   Future<int> getCurrentBloodGlucose() async {
     try {
-      final response = await http.get(Uri.parse(apiUrl), headers: {'accept': 'application/json'});
+      final response = await http.get(Uri.parse(lastBG), headers: {'accept': 'application/json'});
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -27,14 +27,42 @@ class BloodGlucoseService {
   }
 
   Future<Map<String, dynamic>> getStatisticsForLast30Days() async {
-    // Implement API call to get statistics for the last 90 days
-    // Return a map containing avgGlucose, stdDev, ttrHigh, ttrInTarget, and ttrLow
-    return {
-      'avgGlucose': 140,
-      'stdDev': 20,
-      'ttrHigh': 15,
-      'ttrInTarget': 70,
-      'ttrLow': 15,
-    };
+    try {
+      final response = await http.get(Uri.parse(monthlyBG), headers: {'accept': 'application/json'});
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        if (data.isNotEmpty) {
+          final List<int> glucoseValues = data.map<int>((entry) => entry['sgv']).toList();
+
+          final double avgGlucose = glucoseValues.reduce((a, b) => a + b) / glucoseValues.length;
+          final double stdDev = _calculateStandardDeviation(glucoseValues);
+          final int ttrHigh = glucoseValues.where((value) => value > 200).length;
+          final int ttrInTarget = glucoseValues.where((value) => value >= 60 && value <= 200).length;
+          final int ttrLow = glucoseValues.where((value) => value < 60).length;
+
+          return {
+            'avgGlucose': avgGlucose,
+            'stdDev': stdDev,
+            'ttrHigh': (ttrHigh / glucoseValues.length * 100).round(),
+            'ttrInTarget': (ttrInTarget / glucoseValues.length * 100).round(),
+            'ttrLow': (ttrLow / glucoseValues.length * 100).round(),
+          };
+        } else {
+          throw Exception('No data available for the last 30 days');
+        }
+      } else {
+        throw Exception('Failed to load data');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
+
+  double _calculateStandardDeviation(List<int> values) {
+    final double mean = values.reduce((a, b) => a + b) / values.length;
+    final double variance = values.map((value) => (value - mean) * (value - mean)).reduce((a, b) => a + b) / values.length;
+    return variance > 0 ? sqrt(variance) : 0;
   }
 }
