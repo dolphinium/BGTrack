@@ -26,7 +26,6 @@ class FirstScreen extends StatelessWidget {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
             int bloodGlucose = (snapshot.data?[0] as int?) ?? 0;
-            bloodGlucose = 31;
             int highestValue = (snapshot.data?[1] as int?) ?? 0;
             int lowestValue = (snapshot.data?[2] as int?) ?? 0;
             List<Map<String, dynamic>> last10BloodGlucose =
